@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { motion, useInView, AnimatePresence } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { Link } from "react-router-dom";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
@@ -44,6 +44,24 @@ export function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [stats, setStats] = useState({ destinations: 0, travelers: 0, rating: 0 });
   const [activeCategory, setActiveCategory] = useState("Timeless History");
+  const [imagesLoaded, setImagesLoaded] = useState<boolean[]>(
+    new Array(heroImages.length).fill(false)
+  );
+
+  // Preload all hero images on mount
+  useEffect(() => {
+    heroImages.forEach((slide, index) => {
+      const img = new Image();
+      img.onload = () => {
+        setImagesLoaded(prev => {
+          const updated = [...prev];
+          updated[index] = true;
+          return updated;
+        });
+      };
+      img.src = slide.url;
+    });
+  }, []);
 
   // Auto-advance slides
   useEffect(() => {
@@ -171,31 +189,30 @@ export function Home() {
     <div className="min-h-screen bg-[#FFFFFF]">
       <Navbar />
 
-      {/* Hero Section with Slider */}
+      {/* Hero Section with Crossfade Slider — NO AnimatePresence */}
       <section className="relative h-screen mt-[80px] md:mt-[97px] overflow-hidden">
-        <AnimatePresence mode="wait">
-          {heroImages.map((slide, index) => index === currentSlide && (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1, scale: 1.1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.5, ease: "easeInOut" }}
-              className="absolute inset-0"
-            >
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{
-                  backgroundImage: `url(${slide.url})`,
-                  animation: "kenBurns 6s ease-out forwards"
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
-            </motion.div>
-          ))}
-        </AnimatePresence>
 
-        {/* Hero Content */}
+        {/* All slides always in DOM, crossfade via opacity only */}
+        {heroImages.map((slide, index) => (
+          <motion.div
+            key={index}
+            animate={{ opacity: index === currentSlide ? 1 : 0 }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+            className="absolute inset-0"
+            style={{ zIndex: index === currentSlide ? 1 : 0 }}
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${slide.url})`,
+                animation: index === currentSlide ? "kenBurns 6s ease-out forwards" : "none"
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
+          </motion.div>
+        ))}
+
+        {/* Hero Content — above all slides */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full gap-8 md:gap-[100px] px-4">
           <motion.div
             key={currentSlide}
